@@ -1,0 +1,109 @@
+---
+title: "NYPD Shooting Incidents Analysis"
+author: "E.Ly"
+date: "02/22/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_packages, echo=FALSE, results="hide", message=FALSE}
+# Load required libraries
+library(tidyverse)
+library(lubridate)
+```
+Get current data from data sites and read csv file into RStudio. 
+The data we will be analyzing in this report is shooting incidents in New York boroughs.
+```{r get_data, echo=TRUE, message=FALSE}
+# Retrieve data as a csv file from data sites
+url_in <- "https://data.cityofnewyork.us/"
+file_names <- c("api/views/833y-fsy8/rows.csv")
+urls <- str_c(url_in, file_names)
+
+# Read data into RStudio
+shooting_incidents <- read_csv(urls[1])
+```
+Organize and transform the data by removing any unnecessary information, and changing any variables to make the data set more readable. 
+```{r tidy_shooting_incidents, echo=TRUE}
+
+# Get summary of data to see what we are working with
+summary(shooting_incidents)
+
+# Get column names
+colnames(shooting_incidents)
+
+# Reorder column by name and omit any columns not needed for analysis
+col_order <- c("BORO", "LOCATION_DESC", "OCCUR_DATE", "OCCUR_TIME", "PERP_AGE_GROUP", "PERP_SEX", "PERP_RACE", "VIC_AGE_GROUP", "VIC_SEX", "VIC_RACE", "STATISTICAL_MURDER_FLAG")
+NY_shooting_incidents <- shooting_incidents[, col_order]
+
+# Change format of occurrence date 
+NY_shooting_incidents <- NY_shooting_incidents %>%
+  mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+
+# Summary of data
+summary(NY_shooting_incidents)
+NY_shooting_incidents
+
+```
+From the data set, we can see that some columns have missing information per incident. To account for the missing data, I would ignore the incident with the missing values, ignore the variable if it is not significant to my analysis, or use the overall data set at large to develop a model to predict the missing values. 
+
+I am interested in creating a graph to compare the frequency of shooting incidents between each New York borough. 
+```{r visualizing_data_boroughs, echo=TRUE, warning=FALSE}
+# Order the data set by boroughs the incident occurred in 
+incidents_by_boro <- NY_shooting_incidents[order(NY_shooting_incidents$BORO) , ]
+incidents_by_boro
+
+#Find the unique boroughs in the BORO category of the data set
+boroughs <- unique(incidents_by_boro$BORO)
+boroughs
+
+#Find total number of incidents occurring in each borough
+num_BRONX <- sum(str_count(incidents_by_boro, regex("BRONX")))
+num_BRONX
+num_BROOKLYN <- sum(str_count(incidents_by_boro, regex("BROOKLYN")))
+num_BROOKLYN
+num_MANHATTAN <- sum(str_count(incidents_by_boro, regex("MANHATTAN")))
+num_MANHATTAN
+num_QUEENS <- sum(str_count(incidents_by_boro, regex("QUEENS")))
+num_QUEENS
+num_STATEN_ISLAND <- sum(str_count(incidents_by_boro, regex("STATEN ISLAND")))
+num_STATEN_ISLAND
+
+# Make a bar plot comparing incidents in each boroughs of New York. 
+x_val <- c('Bronx','Brooklyn','Manhattan','Queens','Staten Island')
+y_val <- c(num_BRONX, num_BROOKLYN, num_MANHATTAN, num_QUEENS, num_STATEN_ISLAND)
+freq_plot <- barplot(height=y_val, names=x_val, main="Frequency of Shooting Incidents in New York Boroughs", xlab="New York Boroughs", ylab="Number of Shooting Incidents", ylim=c(0,10500))
+```
+
+**Analysis of "Frequency of Shooting Incidents in New York Boroughs"**
+
+  From the graph, Brooklyn experiences the highest amount of shooting incidents, closely followed by the Bronx. Staten Island has the lowest rates of shooting incidents. This would make me interested in why these differences might occur. I would first like to clarify what this data is showing us. For example, does Brooklyn and the Bronx actually have the higher rates of shootings, or just significantly higher populations overall. To determine this, I would like to look at a metric that is something along the lines of how many shootings occur per 1000 of people who are regularly in the area. I would then like to look at a number of follow up metrics around socioeconomic factors, including income and cost of living on average for these areas that might explain the "why" for these shootings after we identify problem areas. Then, similarly, I would look into metrics from the places that have the lowest rates of shooting incidents and try to figure out how they might be doing differently. Are they running crime prevention programs better? Do they have different policing practices? Or, are they handling rehabilitation better? Then, have the problem communities implement these more effective crime prevention programs using their data-driven perspective. 
+
+```{r visualizing_data_sex, echo=TRUE, warning = FALSE}
+# Get counts of each gender  
+table(NY_shooting_incidents$PERP_SEX); table(NY_shooting_incidents$VIC_SEX)
+
+sex <- c("FP", "FV", "MP", "MV", "UP", "UV")
+total_counts <- c(335,2204,13490,21370,1499,11)
+
+# Plotting side by side bar graph 
+
+barplot(height = total_counts, names = sex, main = "Sex of Perpetrators and Victims in New York Shooting Incidents", xlab = "Sex", ylab = "Counts", beside = TRUE, ylim = c(0,25000))
+legend(x = "topright", legend = c("F = Female", "M = Male", "U = Unknown", "P = Perpetrator", "V = Victim"))
+```
+
+**Analysis of Perpetrator and Victim Sex Graph**
+
+  Some interesting insights from the graph include that there are far more victims than there are perpetrators, even with unknown perpetrators factored, which could indicate there are repeat offenders. It would be interesting to see how much more likely a perpetrator will be a repeat offender after they conduct their first shooting. It is also interesting to see just how much more likely men are to shoot another person than women are. It seems that men are the vast majority of both the shooters and the victims. Further analysis could be done to compare which sex is more likely to shoot a person of the same sex.
+
+**Conclusion**
+
+  Organizing and cleaning up the data set allowed me to visualize and deduce trends regarding shooting incidents in New York boroughs. In this report, I chose to focus on two aspects from the data: frequencies of shooting incidents in each borough and the sex of perpetrators and victims.
+ 
+  For the "Frequency of Shooting Incidents in New York Boroughs", I was susceptible to confirmation bias and biased estimators. For example, based off the reputation of a particular New York borough, we might think that we are more likely to see a certain result and then start to expect it. Then, when we see these areas have more shootings, it might be easy for us to assume that it is just as we expected. However, it is important for us to do a follow up investigation to see if there are actually more shootings per population and that the populations of these places aren't just larger on a whole.
+
+  For the other analysis where I looked at the sex of various individuals tied to shooting incidents in the New York boroughs, I was again susceptible to confirmation bias. Because men have a reputation to be more violent than women, it is easy to assume that they will be the vast majority of all shooting cases, which they appear to be. However, we can not just make this assumption based off our data. There are a number of ways to be violent without shooting people.
